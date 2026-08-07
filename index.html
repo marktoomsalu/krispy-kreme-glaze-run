@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <meta name="description" content="Krispy Kreme Glaze Run — an unofficial fan-made doughnut runner game." />
+  <title>Krispy Kreme: Glaze Run</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%8D%A9%3C/text%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="./src/styles.css" />
+</head>
+<body>
+  <div class="shop">
+    <div class="awning"></div>
+
+    <header class="marquee">
+      <img class="logo" src="./assets/krispy-kreme-logo.webp" alt="Krispy Kreme" />
+      <div class="marquee-text">
+        <h1>Glaze <em>Run</em></h1>
+        <p>Original Glazed &middot; made fresh daily</p>
+      </div>
+    </header>
+
+    <div class="screen">
+      <canvas id="game" width="900" height="320" aria-label="Doughnut running game"></canvas>
+    </div>
+
+    <div class="counter">
+      <div>
+        <kbd>Space</kbd> jump (twice to double jump)
+        <kbd>&#8595;</kbd> duck under the dozen boxes
+        <kbd>P</kbd> pause
+      </div>
+      <button class="mute" id="mute">Sound: on</button>
+    </div>
+
+    <div class="touch">
+      <button id="btn-jump">Jump</button>
+      <button id="btn-duck">Duck</button>
+    </div>
+
+    <p class="disclaimer">
+      Unofficial fan game, made for fun. Not affiliated with, sponsored by, or endorsed by
+      Krispy Kreme Doughnut Corporation. Krispy Kreme and its logo are trademarks of their
+      respective owner.
+    </p>
+  </div>
+
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html>

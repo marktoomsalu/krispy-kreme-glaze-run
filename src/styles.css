@@ -1,0 +1,157 @@
+/* Shop styling. The canvas draws the game; this dresses the page around it. */
+:root {
+  --green: #00874e;
+  --green-dark: #00603a;
+  --red: #d2103f;
+  --red-dark: #8e0b2a;
+  --cream: #fff7ef;
+  --ink: #1f2e26;
+}
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { margin: 0; height: 100%; }
+
+body {
+  background:
+    radial-gradient(circle at 14% 20%, rgba(0, 135, 78, 0.1) 0 7px, transparent 8px),
+    radial-gradient(circle at 74% 66%, rgba(210, 16, 63, 0.09) 0 6px, transparent 7px),
+    radial-gradient(circle at 44% 90%, rgba(0, 135, 78, 0.08) 0 5px, transparent 6px),
+    var(--cream);
+  background-size: 170px 170px, 210px 210px, 150px 150px;
+  color: var(--ink);
+  font-family: "Trebuchet MS", Verdana, system-ui, sans-serif;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+  min-height: 100%;
+}
+
+.shop { width: min(980px, 100%); }
+
+.awning {
+  height: 26px;
+  border-radius: 14px 14px 0 0;
+  background: repeating-linear-gradient(90deg, var(--green) 0 34px, #fff 34px 68px);
+  border: 4px solid var(--green-dark);
+  border-bottom: none;
+}
+
+.marquee {
+  background: var(--green);
+  border: 4px solid var(--green-dark);
+  border-top: none;
+  padding: 12px 18px 14px;
+  display: flex;
+  align-items: flex-end;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.marquee .logo {
+  height: clamp(30px, 5vw, 46px);
+  width: auto;
+  display: block;
+  filter: drop-shadow(0 2px 0 var(--green-dark));
+}
+.marquee-text { display: flex; flex-direction: column; }
+.marquee h1 {
+  margin: 0;
+  color: #fff;
+  font-size: clamp(26px, 5vw, 44px);
+  line-height: 0.95;
+  font-family: "Segoe Script", "Brush Script MT", "Snell Roundhand", cursive;
+  font-weight: 400;
+  text-shadow: 2px 3px 0 var(--green-dark);
+}
+.marquee h1 em { color: #ffd8e2; font-style: normal; }
+.marquee p {
+  margin: 0 0 5px;
+  color: #bfe8d3;
+  font-size: 11px;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+}
+
+.screen {
+  position: relative;
+  overflow: hidden;
+  border: 5px solid var(--green-dark);
+  border-top: none;
+  background: #cfebff;
+}
+canvas { display: block; width: 100%; height: auto; }
+
+.counter {
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  background: #fff;
+  border: 5px solid var(--green-dark);
+  border-top: none;
+  border-radius: 0 0 16px 16px;
+  padding: 11px 16px;
+  font-size: 13px;
+  box-shadow: 0 14px 0 rgba(0, 96, 58, 0.14), 0 26px 40px rgba(0, 96, 58, 0.18);
+}
+.counter div { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+
+kbd {
+  background: var(--cream);
+  border: 2px solid var(--green-dark);
+  border-bottom-width: 4px;
+  border-radius: 7px;
+  padding: 2px 8px;
+  font: 600 12px/1.6 ui-monospace, monospace;
+  color: var(--ink);
+}
+
+.mute {
+  background: var(--red);
+  border: 2px solid var(--red-dark);
+  border-bottom-width: 4px;
+  border-radius: 9px;
+  padding: 6px 12px;
+  font: 700 12px/1 ui-monospace, monospace;
+  color: #fff;
+  cursor: pointer;
+}
+.mute:active { border-bottom-width: 2px; transform: translateY(2px); }
+
+.touch {
+  display: none;
+  gap: 10px;
+  padding: 0 16px 14px;
+  background: #fff;
+  border: 5px solid var(--green-dark);
+  border-top: none;
+  border-radius: 0 0 16px 16px;
+  margin-top: -1px;
+}
+.touch button {
+  flex: 1;
+  padding: 16px;
+  border-radius: 12px;
+  border: 3px solid var(--green-dark);
+  border-bottom-width: 6px;
+  background: var(--cream);
+  color: var(--ink);
+  font: 700 15px/1 "Trebuchet MS", sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+.touch button:active { border-bottom-width: 3px; transform: translateY(3px); }
+
+@media (hover: none) and (pointer: coarse) {
+  .touch { display: flex; box-shadow: 0 14px 0 rgba(0, 96, 58, 0.14); }
+  .counter { border-radius: 0; box-shadow: none; }
+}
+
+.disclaimer {
+  margin: 10px 4px 0;
+  font-size: 10px;
+  line-height: 1.5;
+  color: rgba(31, 46, 38, 0.55);
+  text-align: center;
+}

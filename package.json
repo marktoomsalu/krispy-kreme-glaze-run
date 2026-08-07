@@ -1,0 +1,14 @@
+{
+  "name": "krispy-kreme-glaze-run",
+  "version": "1.0.0",
+  "description": "Krispy Kreme: Glaze Run — an unofficial fan-made doughnut endless runner, built with plain canvas and ES modules.",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "vite": "^5.4.0"
+  }
+}
