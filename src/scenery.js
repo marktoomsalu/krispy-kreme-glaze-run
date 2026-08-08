@@ -4,22 +4,22 @@ import { ctx, W, H, GY, roundRect } from './renderer.js';
 import { mix, rnd, TAU } from './util.js';
 import { drawDoughnut } from './doughnut.js';
 
-const clouds = Array.from({ length: 6 }, () => ({
+const clouds = Array.from({ length: 9 }, () => ({
   x: rnd(0, W),
-  y: rnd(24, 104),
+  y: rnd(40, 320),
   scale: rnd(0.55, 1.1)
 }));
 
 const shops = Array.from({ length: 22 }, (_, i) => ({
   x: i * 96 + rnd(-8, 8),
   w: rnd(66, 92),
-  h: rnd(56, 120),
+  h: rnd(90, 340),
   awning: Math.random() < 0.55
 }));
 
-const stars = Array.from({ length: 44 }, () => ({
+const stars = Array.from({ length: 70 }, () => ({
   x: rnd(0, W),
-  y: rnd(8, 150),
+  y: rnd(16, 380),
   r: rnd(0.6, 1.7),
   twinkle: rnd(0, TAU)
 }));
@@ -29,7 +29,7 @@ export function updateScenery(dt, moving) {
     c.x -= (10 + c.scale * 14) * dt * (moving ? 1 : 0.3);
     if (c.x < -90) {
       c.x = W + 60;
-      c.y = rnd(24, 104);
+      c.y = rnd(40, 320);
     }
   }
 }
@@ -55,7 +55,7 @@ export function drawSky() {
 
   // the sun is a doughnut; so is the moon
   ctx.globalAlpha = 0.95;
-  drawDoughnut(786, 70, 33, -state.time * 0.3, {
+  drawDoughnut(756, 130, 48, -state.time * 0.3, {
     glaze: night > 0.5 ? '#EAF0FF' : COLORS.glaze,
     dough: night > 0.5 ? '#C8CEE0' : '#F5C866'
   });
@@ -134,7 +134,7 @@ export function drawHotLightSign() {
   const night = state.night;
 
   ctx.save();
-  ctx.translate(112, 112);
+  ctx.translate(112, 512);
 
   ctx.strokeStyle = mix(COLORS.greenDark, '#0A2A20', night);
   ctx.lineWidth = 7;

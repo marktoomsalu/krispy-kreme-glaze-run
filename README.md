@@ -114,8 +114,12 @@ takes `type` (`square`, `triangle`, `sine`, `sawtooth`), `volume`, and `slide`
 
 ## Notes
 
-- The canvas is always drawn at a logical **900 × 320** and scaled by CSS, so
+- The canvas is always drawn at a logical **900 × 720** and scaled by CSS, so
   coordinates never change with window size. `renderer.js` handles retina sharpness.
+  Chosen deliberately taller than it is wide-relative-to-height (1.25:1, not the
+  landscape-ish 2.81:1 it started as) since most players are on portrait phones —
+  `groundY` keeps the belt exactly 66px deep either way, so this only changes how
+  much sky sits above the play area, not gameplay itself.
 - `dt` is clamped in `main.js`, so pausing on a background tab won't fling you
   across the level when you come back.
 - The doughnut hole is a genuine hole: the ring is *stroked*, not filled, so

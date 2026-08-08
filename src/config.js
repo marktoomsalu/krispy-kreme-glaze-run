@@ -5,9 +5,14 @@
 
 export const CFG = {
   // Canvas is drawn at this fixed logical size, then scaled to fit the page.
+  // Taller than it is wide-relative-to-height on purpose: most players are on
+  // phones, and this shape renders much bigger on a portrait screen than the
+  // old 900x320 ever could. groundY keeps the belt exactly 66px deep (same as
+  // before) — only the sky above the play area grew, so obstacle/player/jump
+  // gameplay is untouched; the extra height is purely additive headroom.
   width: 900,
-  height: 320,
-  groundY: 254,
+  height: 720,
+  groundY: 654,
 
   player: {
     x: 132,
@@ -48,7 +53,7 @@ export const CFG = {
     lift: -2500,          // hold jump to climb
     sink: 1500,
     maxSpeed: 560,
-    ceiling: 86,
+    ceiling: 60,  // raised with the taller canvas so the flight feels bigger
     smashValue: 25,
     magnetRange: 260,
     magnetPull: 420

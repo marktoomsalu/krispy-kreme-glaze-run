@@ -254,3 +254,23 @@ kbd {
 #leaderboard-list li { padding: 2px 0; }
 #leaderboard-list li.tier-discount { color: #ffd8e2; }
 #leaderboard-list li.tier-free_donut { color: #ffc44d; font-weight: 700; }
+
+/* Trim page chrome on phones so the game + touch controls fit without
+   scrolling — the canvas itself doesn't need special handling here, its
+   normal width:100%/height:auto scaling already works well now that the
+   internal resolution is a much less extreme aspect ratio. Placed last in
+   the file, with .counter-prefixed selectors where needed, so it reliably
+   wins over the earlier base rules regardless of specificity quirks. */
+@media (max-width: 640px) {
+  body { padding: 8px; }
+  .awning { display: none; }
+  .marquee { padding: 8px 12px 10px; gap: 8px; }
+  .marquee .logo { height: 26px; }
+  .marquee h1 { font-size: 22px; }
+  .marquee p { font-size: 9px; letter-spacing: 0.18em; }
+  .counter .kbd-hints { display: none; }
+  .counter { justify-content: center; }
+  .counter-buttons { width: 100%; justify-content: center; }
+  #leaderboard-teaser { display: none; }
+  .disclaimer { font-size: 9px; margin: 6px 4px 0; }
+}
