@@ -4,7 +4,8 @@
 -- One-time setup: Supabase dashboard → SQL Editor → New query →
 -- paste this whole file → Run. From-scratch script, not a
 -- migration — don't re-run against a project that already has
--- these objects (drop them first if you need to reset).
+-- these objects (drop them first if you need to reset). If you're
+-- patching an already-live project, use supabase/migrations/ instead.
 --
 -- After running this, copy your Project URL and anon public key
 -- (Project Settings → API) into src/leaderboard.js. Both are safe
@@ -23,8 +24,13 @@ create table public.run_tokens (
   used       boolean not null default false
 );
 
+-- One row per player, not per run: player_id is a random id the client
+-- generates once and caches in localStorage (see src/leaderboard.js).
+-- Only ever holds that player's best-ever score — submit_score() updates
+-- in place instead of inserting a new row when a run doesn't beat it.
 create table public.leaderboard (
   id         uuid primary key default gen_random_uuid(),
+  player_id  uuid not null,
   nickname   text not null,
   score      int not null,
   dozens     int not null default 0,
@@ -32,13 +38,17 @@ create table public.leaderboard (
   created_at timestamptz not null default now()
 );
 
+create unique index leaderboard_player_id_key on public.leaderboard (player_id);
+
 create table public.claims (
   id             uuid primary key default gen_random_uuid(),
   leaderboard_id uuid references public.leaderboard(id) on delete cascade,
   tier           text not null,
   claim_code     text not null unique,
+  contact        text, -- how to reach the winner; filled in later via submit_claim_contact()
   status         text not null default 'pending',
-  created_at     timestamptz not null default now()
+  created_at     timestamptz not null default now(),
+  unique (leaderboard_id, tier) -- one claim per player per tier, ever — replays reuse the same code
 );
 
 -- ---------------------------------------------------------------- RLS + grants
@@ -99,18 +109,34 @@ grant execute on function public.start_run() to anon, authenticated;
 -- server-side time. This is a soft plausibility filter tuned to the
 -- game's actual difficulty curve, not a bulletproof anti-cheat system
 -- — appropriate for a giveaway prize, not a financial one.
+--
+-- Only writes to `leaderboard` when this run beats the player's own
+-- previous best (or it's their first submission) — the table always
+-- holds one row per player_id, their best-ever run. Tier/claim state
+-- is derived from that best, and a claim code is only ever minted once
+-- per (player, tier): replaying an already-won tier just returns the
+-- same code again instead of generating a new one.
 
 create or replace function public.submit_score(
-  p_run_id   uuid,
-  p_token    text,
-  p_distance numeric,
-  p_bonus    int,
-  p_dozens   int,
-  p_holes    int,
-  p_smashes  int,
-  p_nickname text
+  p_run_id    uuid,
+  p_token     text,
+  p_distance  numeric,
+  p_bonus     int,
+  p_dozens    int,
+  p_holes     int,
+  p_smashes   int,
+  p_nickname  text,
+  p_player_id uuid
 )
-returns table(accepted boolean, score int, rank int, tier text, claim_code text, reason text)
+returns table(
+  accepted    boolean,
+  score       int,
+  rank        int,
+  tier        text,
+  claim_code  text,
+  is_new_best boolean,
+  reason      text
+)
 language plpgsql
 security definer
 set search_path = public, extensions
@@ -133,10 +159,13 @@ declare
   c_grace_seconds         constant numeric := 5; -- covers start_run's network round trip + rAF jitter
   c_max_session_seconds   constant numeric := 1200; -- 20 min; bounds how long a token can be "banked"
 
-  -- prize tiers — tune freely after seeing real score distribution.
-  -- names are stable so the client never has to hardcode numbers.
-  discount_threshold      constant int := 1200;
-  free_donut_threshold    constant int := 4000;
+  -- prize tiers — deliberately steep. ~60s of near-perfect play for the
+  -- discount, ~150s (2.5min) for the free donut, given this game's
+  -- difficulty ramp (twin obstacles past score 380, flying boxes past
+  -- 260). Tune freely after seeing real score distribution; both live
+  -- as named constants so nothing else has to change to retune.
+  discount_threshold      constant int := 3000;
+  free_donut_threshold    constant int := 8000;
 
   v_row            public.run_tokens%rowtype;
   v_elapsed        numeric;
@@ -152,14 +181,23 @@ declare
   v_claim_code     text;
   v_leaderboard_id uuid;
   v_nickname       text;
+  v_existing_id    uuid;
+  v_existing_score int;
+  v_is_new_best    boolean;
+  v_best_score     int;
 begin
+  if p_player_id is null then
+    return query select false, null::int, null::int, null::text, null::text, null::boolean, 'missing_player_id';
+    return;
+  end if;
+
   select * into v_row
   from public.run_tokens
   where id = p_run_id and token = p_token and used = false
   for update;
 
   if not found then
-    return query select false, null::int, null::int, null::text, null::text, 'invalid_or_used_token';
+    return query select false, null::int, null::int, null::text, null::text, null::boolean, 'invalid_or_used_token';
     return;
   end if;
 
@@ -169,7 +207,7 @@ begin
   v_elapsed := extract(epoch from (now() - v_row.created_at));
 
   if v_elapsed < 0 or v_elapsed > c_max_session_seconds then
-    return query select false, null::int, null::int, null::text, null::text, 'session_too_long';
+    return query select false, null::int, null::int, null::text, null::text, null::boolean, 'session_too_long';
     return;
   end if;
 
@@ -185,12 +223,12 @@ begin
   end if;
 
   if p_distance < 0 or p_distance > v_max_distance then
-    return query select false, null::int, null::int, null::text, null::text, 'distance_implausible';
+    return query select false, null::int, null::int, null::text, null::text, null::boolean, 'distance_implausible';
     return;
   end if;
 
   if p_holes < 0 or p_dozens < 0 or p_smashes < 0 then
-    return query select false, null::int, null::int, null::text, null::text, 'negative_field';
+    return query select false, null::int, null::int, null::text, null::text, null::boolean, 'negative_field';
     return;
   end if;
 
@@ -199,51 +237,107 @@ begin
   -- would sail through every other check untouched.
   v_max_holes := ceil(v_max_distance / c_min_hole_gap) * c_max_holes_per_burst;
   if p_holes > v_max_holes then
-    return query select false, null::int, null::int, null::text, null::text, 'holes_implausible';
+    return query select false, null::int, null::int, null::text, null::text, null::boolean, 'holes_implausible';
     return;
   end if;
 
   v_expected_bonus := p_holes * c_hole_value + p_smashes * c_smash_value;
   if p_bonus is distinct from v_expected_bonus then
-    return query select false, null::int, null::int, null::text, null::text, 'bonus_mismatch';
+    return query select false, null::int, null::int, null::text, null::text, null::boolean, 'bonus_mismatch';
     return;
   end if;
 
   if p_dozens * 12 > p_holes then
-    return query select false, null::int, null::int, null::text, null::text, 'dozens_exceed_holes';
+    return query select false, null::int, null::int, null::text, null::text, null::boolean, 'dozens_exceed_holes';
     return;
   end if;
 
   if p_smashes > p_dozens * c_max_smashes_per_dozen then
-    return query select false, null::int, null::int, null::text, null::text, 'smashes_implausible';
+    return query select false, null::int, null::int, null::text, null::text, null::boolean, 'smashes_implausible';
     return;
   end if;
 
   v_score := floor(p_distance / c_px_per_metre) + p_bonus;
   v_nickname := left(coalesce(nullif(trim(p_nickname), ''), 'Anonüümne'), 20);
 
-  insert into public.leaderboard (nickname, score, dozens, tier)
-  values (v_nickname, v_score, p_dozens, null)
-  returning id into v_leaderboard_id;
+  select lb.id, lb.score into v_existing_id, v_existing_score
+  from public.leaderboard as lb
+  where lb.player_id = p_player_id;
 
-  select count(*) + 1 into v_rank from public.leaderboard as lb where lb.score > v_score;
+  if not found then
+    v_is_new_best := true;
+    insert into public.leaderboard (player_id, nickname, score, dozens, tier)
+    values (p_player_id, v_nickname, v_score, p_dozens, null)
+    returning id into v_leaderboard_id;
+  elsif v_score > v_existing_score then
+    v_is_new_best := true;
+    update public.leaderboard
+    set nickname = v_nickname, score = v_score, dozens = p_dozens, created_at = now()
+    where id = v_existing_id
+    returning id into v_leaderboard_id;
+  else
+    v_is_new_best := false;
+    v_leaderboard_id := v_existing_id;
+  end if;
 
-  if v_score >= free_donut_threshold then
+  select lb.score into v_best_score from public.leaderboard as lb where lb.id = v_leaderboard_id;
+
+  select count(*) + 1 into v_rank from public.leaderboard as lb where lb.score > v_best_score;
+
+  if v_best_score >= free_donut_threshold then
     v_tier := 'free_donut';
-  elsif v_score >= discount_threshold then
+  elsif v_best_score >= discount_threshold then
     v_tier := 'discount';
+  else
+    v_tier := null;
   end if;
 
   if v_tier is not null then
-    v_claim_code := 'KK-' || upper(substr(encode(gen_random_bytes(4), 'hex'), 1, 6));
-    insert into public.claims (leaderboard_id, tier, claim_code)
-    values (v_leaderboard_id, v_tier, v_claim_code);
     update public.leaderboard set tier = v_tier where id = v_leaderboard_id;
+
+    select c.claim_code into v_claim_code
+    from public.claims as c
+    where c.leaderboard_id = v_leaderboard_id and c.tier = v_tier;
+
+    if v_claim_code is null then
+      v_claim_code := 'KK-' || upper(substr(encode(gen_random_bytes(4), 'hex'), 1, 6));
+      insert into public.claims (leaderboard_id, tier, claim_code)
+      values (v_leaderboard_id, v_tier, v_claim_code);
+    end if;
   end if;
 
-  return query select true, v_score, v_rank, v_tier, v_claim_code, null::text;
+  return query select true, v_score, v_rank, v_tier, v_claim_code, v_is_new_best, null::text;
 end;
 $$;
 
-revoke all on function public.submit_score(uuid, text, numeric, int, int, int, int, text) from public;
-grant execute on function public.submit_score(uuid, text, numeric, int, int, int, int, text) to anon, authenticated;
+revoke all on function public.submit_score(uuid, text, numeric, int, int, int, int, text, uuid) from public;
+grant execute on function public.submit_score(uuid, text, numeric, int, int, int, int, text, uuid) to anon, authenticated;
+
+-- ---------------------------------------------------------------- submit_claim_contact()
+--
+-- Lets a winner attach contact info to their own claim code so it can
+-- actually be followed up on. Knowing the code (shown only to the
+-- winner, never exposed via any public read) is the authorization —
+-- appropriate for a giveaway, not a financial system. Can only be set
+-- once per code, so it can't be overwritten/spammed after the fact.
+
+create or replace function public.submit_claim_contact(p_claim_code text, p_contact text)
+returns boolean
+language plpgsql
+security definer
+set search_path = public, extensions
+as $$
+declare
+  v_updated int;
+begin
+  update public.claims
+  set contact = left(trim(p_contact), 200)
+  where claim_code = p_claim_code and contact is null and trim(coalesce(p_contact, '')) <> '';
+
+  get diagnostics v_updated = row_count;
+  return v_updated > 0;
+end;
+$$;
+
+revoke all on function public.submit_claim_contact(text, text) from public;
+grant execute on function public.submit_claim_contact(text, text) to anon, authenticated;

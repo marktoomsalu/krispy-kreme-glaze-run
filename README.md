@@ -174,9 +174,15 @@ system — appropriate for a giveaway, not a bank. The prize thresholds live as 
 constants near the top of `submit_score()` in `schema.sql` (mirrored, display-only,
 in `CFG.rewards` in `src/config.js`) — tune both together if you change them.
 
-**Claiming a prize:** there's no automated redemption flow yet. A claim code shown
-in-game corresponds to a row in the `claims` table (Supabase dashboard → Table
-Editor → `claims`) — look it up there to verify and fulfill it manually.
+**Claiming a prize:** the leaderboard keeps one row per player (their best-ever
+run, not every attempt), keyed by a random id the browser generates and caches —
+not an account system, just enough to avoid one player cluttering the board with
+every retry. Crossing a tier for the first time shows a claim code once, and the
+game prompts for an email or phone number right there so you can actually reach
+them; replaying afterward just shows the same code again rather than minting a
+new one. Fulfillment is still manual: look the code up in the Supabase dashboard
+(Table Editor → `claims`) to see its `contact` value and mark it however you
+track fulfillment.
 
 ---
 

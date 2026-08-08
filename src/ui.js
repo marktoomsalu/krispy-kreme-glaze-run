@@ -1,6 +1,11 @@
 import { CFG } from './config.js';
 import { state } from './state.js';
-import { fetchTop, getNickname, saveNickname } from './leaderboard.js';
+import { fetchTop, getNickname, saveNickname, submitClaimContact } from './leaderboard.js';
+
+const TIER_COPY = {
+  discount: { win: '5% allahindluse', noun: '5% allahindlus' },
+  free_donut: { win: 'tasuta sõõriku', noun: 'tasuta sõõrik' }
+};
 
 let lastHandledKey = null;
 
@@ -66,15 +71,77 @@ function renderResultBlock(el, result) {
   el.textContent = '';
   addLine(el, `Sinu tulemus: ${result.score} · koht #${result.rank}`);
 
-  if (result.tier === 'discount') {
-    addLine(el, `Sa võitsid 5% allahindluse! Kood: ${result.claimCode}`, 'win');
-  } else if (result.tier === 'free_donut') {
-    addLine(el, `Sa võitsid tasuta sõõriku! Kood: ${result.claimCode}`, 'win');
+  if (result.tier) {
+    const copy = TIER_COPY[result.tier];
+    if (result.isNewBest) {
+      addLine(el, `Sa võitsid ${copy.win}! Kood: ${result.claimCode}`, 'win');
+    } else {
+      addLine(el, `Sinu varasem võit: ${copy.noun}. Kood: ${result.claimCode}`, 'win');
+    }
+    renderContactForm(el, result.claimCode);
   } else {
     const toDiscount = CFG.rewards.discountScore - result.score;
     const toDonut = CFG.rewards.freeDonutScore - result.score;
     if (toDiscount > 0) addLine(el, `Vajaka jäi ${toDiscount} punktist allahindluseni!`, 'nudge');
     else if (toDonut > 0) addLine(el, `Vajaka jäi ${toDonut} punktist tasuta sõõrikuni!`, 'nudge');
+  }
+}
+
+function renderContactForm(el, claimCode) {
+  if (getContactGiven(claimCode)) {
+    addLine(el, 'Aitäh! Võtame varsti ühendust.', 'nudge');
+    return;
+  }
+
+  const wrap = document.createElement('div');
+  wrap.className = 'contact-form';
+
+  const label = document.createElement('label');
+  label.textContent = 'Jäta e-post või telefon, et saaksime auhinna kätte anda';
+
+  const input = document.createElement('input');
+  input.placeholder = 'nimi@näide.ee';
+  input.maxLength = 200;
+
+  const btn = document.createElement('button');
+  btn.textContent = 'Saada';
+
+  const submit = async () => {
+    const value = input.value.trim();
+    if (!value) return;
+    btn.disabled = true;
+    const ok = await submitClaimContact(claimCode, value);
+    if (ok) {
+      setContactGiven(claimCode);
+      wrap.remove();
+      addLine(el, 'Aitäh! Võtame varsti ühendust.', 'nudge');
+    } else {
+      btn.disabled = false;
+    }
+  };
+
+  btn.addEventListener('click', submit);
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') submit();
+  });
+
+  wrap.append(label, input, btn);
+  el.appendChild(wrap);
+}
+
+function getContactGiven(code) {
+  try {
+    return localStorage.getItem(`glaze-runner:contactGiven:${code}`) === '1';
+  } catch {
+    return false;
+  }
+}
+
+function setContactGiven(code) {
+  try {
+    localStorage.setItem(`glaze-runner:contactGiven:${code}`, '1');
+  } catch {
+    /* ignore */
   }
 }
 

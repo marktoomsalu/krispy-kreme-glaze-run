@@ -67,8 +67,8 @@ export const CFG = {
   // copy — it's here purely so the UI can show "N points to go" hints.
   // Keep both in sync if you tune these.
   rewards: {
-    discountScore: 1200,
-    freeDonutScore: 4000
+    discountScore: 3000,
+    freeDonutScore: 8000
   }
 };
 

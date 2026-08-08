@@ -233,6 +233,14 @@ kbd {
 #leaderboard-result p.win { color: #ffd8e2; font-weight: 700; }
 #leaderboard-result p.nudge { color: #bfe8d3; }
 
+.contact-form {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  margin: 6px 0 2px;
+}
+
 #leaderboard-list {
   width: min(320px, 100%);
   margin: 0;
