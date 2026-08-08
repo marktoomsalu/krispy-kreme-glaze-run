@@ -33,13 +33,25 @@ export function initInput({ onPress, onPause, onBlur }) {
     if (DUCK_CODES.includes(e.code)) keys.duck = false;
   });
 
+  // Top half of the canvas jumps, bottom half ducks (both instant + held-
+  // continuous, matching the keyboard/button behavior exactly) — a timing
+  // based tap-vs-hold split doesn't work here since holding jump already
+  // means something (variable jump height, and "hold to climb" mid-flight),
+  // so a delayed duck-on-hold would fire a jump first, then yank it down.
   canvas.addEventListener('pointerdown', (e) => {
     e.preventDefault();
-    keys.jump = true;
-    onPress();
+    const rect = canvas.getBoundingClientRect();
+    const relY = (e.clientY - rect.top) / rect.height;
+    if (relY > 0.5) {
+      keys.duck = true;
+    } else {
+      keys.jump = true;
+      onPress();
+    }
   });
   addEventListener('pointerup', () => {
     keys.jump = false;
+    keys.duck = false;
   });
 
   bindButton(document.getElementById('btn-jump'), 'jump', onPress);

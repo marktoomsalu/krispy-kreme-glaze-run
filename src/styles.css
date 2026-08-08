@@ -8,7 +8,11 @@
   --ink: #1f2e26;
 }
 
-* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+/* touch-action:manipulation stops the browser's double-tap-to-zoom gesture
+   on quick double jumps — user-scalable=no in the viewport meta isn't
+   enough on its own, iOS in particular still honours double-tap-zoom
+   unless the element opts out like this. */
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
 html, body { margin: 0; height: 100%; }
 
 body {
