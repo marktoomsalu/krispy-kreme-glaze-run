@@ -1,7 +1,7 @@
 import { CFG, COLORS } from './config.js';
-import { state, player } from './state.js';
-import { ctx, W, H, GY, roundRect } from './renderer.js';
-import { mix, rnd, TAU } from './util.js';
+import { state } from './state.js';
+import { ctx, W, H, GY } from './renderer.js';
+import { mix, pick, rnd, TAU } from './util.js';
 import { drawDoughnut } from './doughnut.js';
 
 const clouds = Array.from({ length: 9 }, () => ({
@@ -10,11 +10,17 @@ const clouds = Array.from({ length: 9 }, () => ({
   scale: rnd(0.55, 1.1)
 }));
 
-const shops = Array.from({ length: 22 }, (_, i) => ({
-  x: i * 96 + rnd(-8, 8),
-  w: rnd(66, 92),
-  h: rnd(90, 340),
-  awning: Math.random() < 0.55
+// A calm, distant Tallinn Old Town silhouette — spires (Oleviste-ish),
+// domes (Alexander Nevsky-ish) and plain city-wall towers, in brand green.
+// Sparser and slower-moving than a foreground row of shopfronts on purpose.
+const SKYLINE_TYPES = ['spire', 'dome', 'tower'];
+const skyline = Array.from({ length: 12 }, (_, i) => ({
+  x: i * 160 + rnd(-20, 20),
+  w: rnd(46, 76),
+  h: rnd(110, 230),
+  type: pick(SKYLINE_TYPES),
+  lit: Math.random() < 0.4,
+  litY: rnd(0.3, 0.75)
 }));
 
 const stars = Array.from({ length: 70 }, () => ({
@@ -71,103 +77,55 @@ export function drawSky() {
   }
 }
 
-export function drawShopfronts() {
-  const offset = (state.distance * 0.18) % 96;
+/** Distant Old Town skyline — slow parallax, flat silhouette, no per-frame
+ *  randomness (window lit/position is decided once at creation, not per
+ *  draw, so nothing flickers). */
+export function drawSkyline() {
+  const offset = (state.distance * 0.07) % 160;
   const night = state.night;
-  const wall = mix(COLORS.green, '#0C2B33', night);
+  // mix() returns an rgb(...) string, not hex — feeding that back into a
+  // second mix() call breaks its hex parser, so this brand-green-toward-
+  // greenDark blend is precomputed as a literal hex value instead.
+  const silhouette = mix('#007947', '#04140F', night * 0.85);
 
-  for (const b of shops) {
-    const x = b.x - offset - 96;
-    if (x > W + 40 || x < -140) continue;
+  for (const b of skyline) {
+    const x = b.x - offset - 160;
+    if (x > W + 60 || x < -180) continue;
+    const top = GY - b.h;
 
-    ctx.fillStyle = wall;
-    ctx.fillRect(x, GY - b.h, b.w, b.h);
-    ctx.fillStyle = mix(COLORS.greenDark, '#081E24', night);
-    ctx.fillRect(x, GY - b.h, b.w, 6);
-
-    // lit window with trays of doughnuts inside
-    ctx.fillStyle = night > 0.35 ? 'rgba(255,214,120,.88)' : 'rgba(255,247,239,.92)';
-    ctx.fillRect(x + 10, GY - b.h + 18, b.w - 20, b.h - 34);
-
-    ctx.fillStyle = mix('#D8A86A', '#9A6E38', night * 0.5);
-    const rows = Math.max(1, Math.floor((b.h - 46) / 20));
-    for (let r = 0; r < rows; r++) {
-      for (let c = 0; c < Math.floor((b.w - 24) / 16); c++) {
-        const cx = x + 18 + c * 16;
-        const cy = GY - b.h + 32 + r * 20;
-        if (cy > GY - 20) continue;
-        ctx.beginPath();
-        ctx.arc(cx, cy, 5, 0, TAU);
-        ctx.fill();
-        ctx.save();
-        ctx.globalCompositeOperation = 'destination-out';
-        ctx.beginPath();
-        ctx.arc(cx, cy, 1.8, 0, TAU);
-        ctx.fill();
-        ctx.restore();
+    ctx.fillStyle = silhouette;
+    if (b.type === 'spire') {
+      const capH = b.h * 0.32;
+      ctx.fillRect(x, top + capH, b.w, b.h - capH);
+      ctx.beginPath();
+      ctx.moveTo(x, top + capH);
+      ctx.lineTo(x + b.w / 2, top);
+      ctx.lineTo(x + b.w, top + capH);
+      ctx.closePath();
+      ctx.fill();
+      // a small red beacon at the very tip — the one bit of brand red up here
+      ctx.fillStyle = COLORS.red;
+      ctx.beginPath();
+      ctx.arc(x + b.w / 2, top - 1, 2.4, 0, TAU);
+      ctx.fill();
+    } else if (b.type === 'dome') {
+      const domeR = b.w / 2;
+      ctx.fillRect(x, top + domeR, b.w, b.h - domeR);
+      ctx.beginPath();
+      ctx.arc(x + domeR, top + domeR, domeR, Math.PI, 0);
+      ctx.fill();
+    } else {
+      ctx.fillRect(x, top, b.w, b.h);
+      for (let cx = x + 4; cx < x + b.w - 4; cx += 12) {
+        ctx.fillRect(cx, top - 5, 6, 6);
       }
     }
 
-    if (b.awning) drawAwning(x - 4, GY - b.h + 12, b.w + 8, night);
+    if (b.lit && night > 0.3) {
+      ctx.fillStyle = 'rgba(255,214,120,.75)';
+      ctx.fillRect(x + b.w * 0.4, top + b.h * b.litY, 3, 5);
+    }
   }
-}
-
-function drawAwning(x, y, width, night) {
-  const stripe = 13;
-  for (let i = 0; i < Math.ceil(width / stripe); i++) {
-    ctx.fillStyle = i % 2 ? '#FFFFFF' : mix(COLORS.red, '#5C1226', night);
-    const sx = x + i * stripe;
-    const ex = Math.min(sx + stripe, x + width);
-    ctx.beginPath();
-    ctx.moveTo(sx, y);
-    ctx.lineTo(ex, y);
-    ctx.lineTo(ex - 2, y + 16);
-    ctx.lineTo(sx - 2, y + 16);
-    ctx.closePath();
-    ctx.fill();
-  }
-}
-
-/** The HOT NOW sign. Glows steadily, blazes during a rush. */
-export function drawHotLightSign() {
-  const lit = player.rush > 0 || Math.sin(state.time * 1.3) > -0.25;
-  const night = state.night;
-
-  ctx.save();
-  ctx.translate(112, 512);
-
-  ctx.strokeStyle = mix(COLORS.greenDark, '#0A2A20', night);
-  ctx.lineWidth = 7;
-  ctx.beginPath();
-  ctx.moveTo(0, 30);
-  ctx.lineTo(0, 100);
-  ctx.stroke();
-
-  ctx.fillStyle = mix(COLORS.greenDark, '#0A2A20', night);
-  roundRect(-62, -30, 124, 60, 9);
-  ctx.fill();
-  ctx.fillStyle = '#FFFFFF';
-  roundRect(-57, -25, 114, 50, 6);
-  ctx.fill();
-
-  ctx.fillStyle = lit ? COLORS.red : '#E9D3D8';
-  if (lit) {
-    ctx.shadowColor = COLORS.red;
-    ctx.shadowBlur = player.rush > 0 ? 34 : 16;
-  }
-  ctx.beginPath();
-  ctx.arc(-36, -2, 11, 0, TAU);
-  ctx.fill();
-  ctx.shadowBlur = 0;
-
-  ctx.textAlign = 'left';
-  ctx.font = '700 18px "Trebuchet MS", sans-serif';
-  ctx.fillStyle = lit ? COLORS.red : '#E9D3D8';
-  ctx.fillText('KUUM', -19, 1);
-  ctx.font = '700 13px "Trebuchet MS", sans-serif';
-  ctx.fillStyle = lit ? COLORS.green : '#CFE0D6';
-  ctx.fillText('NÜÜD', -19, 17);
-  ctx.restore();
 }
 
 /** The conveyor belt you run along. */

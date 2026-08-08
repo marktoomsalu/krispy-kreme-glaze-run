@@ -66,11 +66,11 @@ src/
   state.js            all mutable run state (score, player, entity arrays)
   renderer.js         canvas + ctx, retina scaling, shared drawing helpers
   util.js             clamp / rnd / pick / colour mixing / AABB overlap
-  input.js            keyboard, pointer and on-screen buttons → a `keys` object
+  input.js            keyboard and pointer (canvas jump/duck zones) → a `keys` object
   audio.js            WebAudio beeps, generated on the fly
   storage.js          best score in localStorage
   doughnut.js         the shared doughnut art (player, stacks, sun and moon)
-  scenery.js          sky, shopfronts, hot light sign, conveyor, glaze curtain
+  scenery.js          sky, distant Tallinn skyline, conveyor, glaze curtain
   hud.js              dozen-box meter, scoreboard, title / pause / game over panels
   leaderboard.js       Supabase client: start a run, submit a score, fetch the top 10
   ui.js                DOM overlays canvas can't host: nickname entry, leaderboard panel

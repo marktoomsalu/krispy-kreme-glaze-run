@@ -18,8 +18,7 @@ import { burst, updateParticles, fadeParticles, drawParticles } from './entities
 import {
   updateScenery,
   drawSky,
-  drawShopfronts,
-  drawHotLightSign,
+  drawSkyline,
   drawConveyor,
   drawGlazeCurtain
 } from './scenery.js';
@@ -177,8 +176,7 @@ export function draw() {
   }
 
   drawSky();
-  drawShopfronts();
-  drawHotLightSign();
+  drawSkyline();
   drawConveyor();
   drawGlazeCurtain();
 
