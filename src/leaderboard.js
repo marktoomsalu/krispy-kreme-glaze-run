@@ -4,8 +4,9 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 // client code. All access control lives in RLS policies + the
 // SECURITY DEFINER RPC functions in supabase/schema.sql — see README.md
 // for setup. Until these are filled in, the leaderboard silently no-ops.
-const SUPABASE_URL = 'YOUR_SUPABASE_PROJECT_URL';
-const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';
+const SUPABASE_URL = 'https://yvupxbclhuyofjfwfklq.supabase.co';
+const SUPABASE_ANON_KEY =
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl2dXB4YmNsaHV5b2ZqZndma2xxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYxNzIxMzAsImV4cCI6MjEwMTc0ODEzMH0.4gJlOk-mMLY7qyxxJdPCvvbI2rKaeY2Y5axO8e06jBc';
 
 const configured = !SUPABASE_URL.startsWith('YOUR_') && !SUPABASE_ANON_KEY.startsWith('YOUR_');
 const supabase = configured ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;

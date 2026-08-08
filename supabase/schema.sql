@@ -76,14 +76,14 @@ create or replace function public.start_run()
 returns table(run_id uuid, token text)
 language plpgsql
 security definer
-set search_path = public
+set search_path = public, extensions
 as $$
 declare
   v_id uuid;
   v_token text;
 begin
-  insert into public.run_tokens default values
-  returning id, token into v_id, v_token;
+  insert into public.run_tokens as rt default values
+  returning rt.id, rt.token into v_id, v_token;
 
   return query select v_id, v_token;
 end;
@@ -113,7 +113,7 @@ create or replace function public.submit_score(
 returns table(accepted boolean, score int, rank int, tier text, claim_code text, reason text)
 language plpgsql
 security definer
-set search_path = public
+set search_path = public, extensions
 as $$
 declare
   -- physics constants — mirror src/config.js. If you tune the game's
@@ -128,6 +128,8 @@ declare
   c_hole_value            constant int := 10;
   c_smash_value           constant int := 25;
   c_max_smashes_per_dozen constant int := 10;    -- real max ~6 per rush window; generous soft ceiling
+  c_min_hole_gap          constant numeric := 880; -- CFG.holes.minGap — smallest real gap between hole bursts
+  c_max_holes_per_burst   constant int := 6;       -- CFG.holes.js burst size is 3 + floor(random()*4), max 6
   c_grace_seconds         constant numeric := 5; -- covers start_run's network round trip + rAF jitter
   c_max_session_seconds   constant numeric := 1200; -- 20 min; bounds how long a token can be "banked"
 
@@ -142,6 +144,7 @@ declare
   v_t_cap          numeric;
   v_x              numeric;
   v_max_distance   numeric;
+  v_max_holes      int;
   v_expected_bonus int;
   v_score          int;
   v_rank           int;
@@ -191,6 +194,15 @@ begin
     return;
   end if;
 
+  -- holes are gated by real distance travelled too, at CFG.holes' burst
+  -- density — without this, a tiny/zero distance + huge p_holes/p_bonus
+  -- would sail through every other check untouched.
+  v_max_holes := ceil(v_max_distance / c_min_hole_gap) * c_max_holes_per_burst;
+  if p_holes > v_max_holes then
+    return query select false, null::int, null::int, null::text, null::text, 'holes_implausible';
+    return;
+  end if;
+
   v_expected_bonus := p_holes * c_hole_value + p_smashes * c_smash_value;
   if p_bonus is distinct from v_expected_bonus then
     return query select false, null::int, null::int, null::text, null::text, 'bonus_mismatch';
@@ -214,7 +226,7 @@ begin
   values (v_nickname, v_score, p_dozens, null)
   returning id into v_leaderboard_id;
 
-  select count(*) + 1 into v_rank from public.leaderboard where score > v_score;
+  select count(*) + 1 into v_rank from public.leaderboard as lb where lb.score > v_score;
 
   if v_score >= free_donut_threshold then
     v_tier := 'free_donut';

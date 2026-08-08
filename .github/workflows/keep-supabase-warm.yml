@@ -17,7 +17,7 @@ jobs:
     steps:
       - name: Ping Supabase REST endpoint
         run: |
-          SUPABASE_URL="YOUR_SUPABASE_PROJECT_URL"
+          SUPABASE_URL="https://yvupxbclhuyofjfwfklq.supabase.co"
           if [[ "$SUPABASE_URL" == YOUR_* ]]; then
             echo "SUPABASE_URL not set yet — skipping (fill this in once the Supabase project exists)."
             exit 0
