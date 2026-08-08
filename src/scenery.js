@@ -1,7 +1,7 @@
 import { CFG, COLORS } from './config.js';
 import { state } from './state.js';
 import { ctx, W, H, GY } from './renderer.js';
-import { mix, pick, rnd, TAU } from './util.js';
+import { mix, rnd, TAU } from './util.js';
 import { drawDoughnut } from './doughnut.js';
 
 const clouds = Array.from({ length: 9 }, () => ({
@@ -10,18 +10,28 @@ const clouds = Array.from({ length: 9 }, () => ({
   scale: rnd(0.55, 1.1)
 }));
 
-// A calm, distant Tallinn Old Town silhouette — spires (Oleviste-ish),
-// domes (Alexander Nevsky-ish) and plain city-wall towers, in brand green.
-// Sparser and slower-moving than a foreground row of shopfronts on purpose.
-const SKYLINE_TYPES = ['spire', 'dome', 'tower'];
-const skyline = Array.from({ length: 12 }, (_, i) => ({
-  x: i * 160 + rnd(-20, 20),
-  w: rnd(46, 76),
-  h: rnd(110, 230),
-  type: pick(SKYLINE_TYPES),
-  lit: Math.random() < 0.4,
-  litY: rnd(0.3, 0.75)
-}));
+// A calm, distant Tallinn Old Town silhouette. A fixed repeating pattern
+// (not per-building random) guarantees the two "landmark" shapes — the
+// tall thin Oleviste-style spire and the TV Tower's mast-and-deck — show
+// up on a predictable rhythm rather than rarely-by-chance; the rest of the
+// pattern is generic gabled merchant houses, a round city-wall tower, and
+// a squat dome for texture. Sparser and slower-moving than a foreground
+// row of shopfronts on purpose — this is meant to read as a calm, distant
+// backdrop, not busy nearby motion.
+const SKYLINE_PATTERN = ['tower', 'gable', 'dome', 'oleviste', 'gable', 'tvtower', 'tower', 'gable'];
+const SKYLINE_SPACING = 165;
+const skyline = Array.from({ length: 24 }, (_, i) => {
+  const type = SKYLINE_PATTERN[i % SKYLINE_PATTERN.length];
+  const tall = type === 'oleviste' || type === 'tvtower';
+  return {
+    x: i * SKYLINE_SPACING + rnd(-15, 15),
+    w: tall ? rnd(50, 62) : type === 'gable' ? rnd(62, 92) : rnd(46, 70),
+    h: tall ? rnd(260, 300) : type === 'gable' ? rnd(90, 150) : rnd(110, 190),
+    type,
+    lit: Math.random() < 0.4,
+    litY: rnd(0.3, 0.75)
+  };
+});
 
 const stars = Array.from({ length: 70 }, () => ({
   x: rnd(0, W),
@@ -81,7 +91,7 @@ export function drawSky() {
  *  randomness (window lit/position is decided once at creation, not per
  *  draw, so nothing flickers). */
 export function drawSkyline() {
-  const offset = (state.distance * 0.07) % 160;
+  const offset = (state.distance * 0.07) % SKYLINE_SPACING;
   const night = state.night;
   // mix() returns an rgb(...) string, not hex — feeding that back into a
   // second mix() call breaks its hex parser, so this brand-green-toward-
@@ -89,13 +99,50 @@ export function drawSkyline() {
   const silhouette = mix('#007947', '#04140F', night * 0.85);
 
   for (const b of skyline) {
-    const x = b.x - offset - 160;
-    if (x > W + 60 || x < -180) continue;
+    const x = b.x - offset - SKYLINE_SPACING;
+    if (x > W + 60 || x < -200) continue;
     const top = GY - b.h;
 
     ctx.fillStyle = silhouette;
-    if (b.type === 'spire') {
-      const capH = b.h * 0.32;
+    if (b.type === 'oleviste') {
+      // St. Olaf's-style spire — very tall and thin, the tallest thing on
+      // the skyline, with a red beacon at the tip (the one bit of brand
+      // red up here).
+      const bodyH = b.h * 0.34;
+      const bodyW = b.w * 0.62;
+      const bodyX = x + (b.w - bodyW) / 2;
+      ctx.fillRect(bodyX, top + b.h - bodyH, bodyW, bodyH);
+      ctx.beginPath();
+      ctx.moveTo(bodyX, top + b.h - bodyH);
+      ctx.lineTo(x + b.w / 2, top);
+      ctx.lineTo(bodyX + bodyW, top + b.h - bodyH);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = COLORS.red;
+      ctx.beginPath();
+      ctx.arc(x + b.w / 2, top - 1, 2.4, 0, TAU);
+      ctx.fill();
+    } else if (b.type === 'tvtower') {
+      // Tallinn TV Tower — thin mast, a wide observation-deck disc partway
+      // up, mast continuing thinner above it.
+      const deckY = top + b.h * 0.4;
+      const mastW = b.w * 0.16;
+      const mastX = x + b.w / 2 - mastW / 2;
+      ctx.fillRect(mastX, top, mastW, b.h);
+      ctx.beginPath();
+      ctx.ellipse(x + b.w / 2, deckY, b.w * 0.4, b.h * 0.035, 0, 0, TAU);
+      ctx.fill();
+    } else if (b.type === 'dome') {
+      // squat round city-wall tower with a conical cap
+      const domeR = b.w / 2;
+      ctx.fillRect(x, top + domeR, b.w, b.h - domeR);
+      ctx.beginPath();
+      ctx.arc(x + domeR, top + domeR, domeR, Math.PI, 0);
+      ctx.fill();
+    } else if (b.type === 'gable') {
+      // stepped Hanseatic merchant-house gable — wide and blunt, unlike
+      // the needle-thin oleviste spire
+      const capH = Math.min(b.h * 0.4, 42);
       ctx.fillRect(x, top + capH, b.w, b.h - capH);
       ctx.beginPath();
       ctx.moveTo(x, top + capH);
@@ -103,18 +150,8 @@ export function drawSkyline() {
       ctx.lineTo(x + b.w, top + capH);
       ctx.closePath();
       ctx.fill();
-      // a small red beacon at the very tip — the one bit of brand red up here
-      ctx.fillStyle = COLORS.red;
-      ctx.beginPath();
-      ctx.arc(x + b.w / 2, top - 1, 2.4, 0, TAU);
-      ctx.fill();
-    } else if (b.type === 'dome') {
-      const domeR = b.w / 2;
-      ctx.fillRect(x, top + domeR, b.w, b.h - domeR);
-      ctx.beginPath();
-      ctx.arc(x + domeR, top + domeR, domeR, Math.PI, 0);
-      ctx.fill();
     } else {
+      // plain crenellated city-wall tower
       ctx.fillRect(x, top, b.w, b.h);
       for (let cx = x + 4; cx < x + b.w - 4; cx += 12) {
         ctx.fillRect(cx, top - 5, 6, 6);
