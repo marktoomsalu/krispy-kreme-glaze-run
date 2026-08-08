@@ -34,10 +34,11 @@ export function initInput({ onPress, onPause, onBlur }) {
   });
 
   // Top half of the canvas jumps, bottom half ducks (both instant + held-
-  // continuous, matching the keyboard/button behavior exactly) — a timing
-  // based tap-vs-hold split doesn't work here since holding jump already
-  // means something (variable jump height, and "hold to climb" mid-flight),
-  // so a delayed duck-on-hold would fire a jump first, then yank it down.
+  // continuous, matching the keyboard exactly, see .zone-hint in index.html
+  // for the on-screen label) — a timing-based tap-vs-hold split doesn't
+  // work here since holding jump already means something (variable jump
+  // height, and "hold to climb" mid-flight), so a delayed duck-on-hold
+  // would fire a jump first, then yank it down.
   canvas.addEventListener('pointerdown', (e) => {
     e.preventDefault();
     const rect = canvas.getBoundingClientRect();
@@ -54,28 +55,9 @@ export function initInput({ onPress, onPause, onBlur }) {
     keys.duck = false;
   });
 
-  bindButton(document.getElementById('btn-jump'), 'jump', onPress);
-  bindButton(document.getElementById('btn-duck'), 'duck');
-
   addEventListener('blur', onBlur);
 }
 
 function isTypingTarget(el) {
   return el?.tagName === 'INPUT' || el?.tagName === 'TEXTAREA';
-}
-
-function bindButton(el, key, onPress) {
-  if (!el) return;
-  el.addEventListener('pointerdown', (e) => {
-    e.preventDefault();
-    keys[key] = true;
-    if (onPress) onPress();
-  });
-  el.addEventListener('pointerup', (e) => {
-    e.preventDefault();
-    keys[key] = false;
-  });
-  el.addEventListener('pointerleave', () => {
-    keys[key] = false;
-  });
 }

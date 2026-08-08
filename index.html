@@ -23,6 +23,9 @@
     <div class="screen">
       <canvas id="game" width="900" height="720" aria-label="Sõõrikujooksu mäng"></canvas>
 
+      <div class="zone-hint zone-hint-top" aria-hidden="true">&#9650; hüppa</div>
+      <div class="zone-hint zone-hint-bottom" aria-hidden="true">&#9660; kükita</div>
+
       <div id="nickname-prompt" class="overlay-panel hidden">
         <label for="nickname-input">Sinu nimi edetabelis</label>
         <input id="nickname-input" maxlength="20" placeholder="Sõõrikusõber" />
@@ -50,11 +53,6 @@
     </div>
 
     <p id="leaderboard-teaser" class="teaser"></p>
-
-    <div class="touch">
-      <button id="btn-jump">Hüppa</button>
-      <button id="btn-duck">Kükita</button>
-    </div>
 
     <p class="disclaimer">
       Fänniprojekt — Krispy Kreme Eesti koostöö on kinnitamisel.

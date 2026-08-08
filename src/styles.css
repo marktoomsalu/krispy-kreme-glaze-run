@@ -83,7 +83,11 @@ body {
   border-top: none;
   background: #cfebff;
 }
-canvas { display: block; width: 100%; height: auto; }
+/* touch-action:none, not just the broader manipulation from the * rule —
+   the canvas has no native scroll/pan/zoom behavior worth preserving,
+   every gesture on it is custom-handled in input.js, so give it the
+   strongest opt-out rather than relying on the general default. */
+canvas { display: block; width: 100%; height: auto; touch-action: none; }
 
 .counter {
   display: flex;
@@ -143,32 +147,27 @@ kbd {
   color: var(--green-dark);
 }
 
-.touch {
+/* Jump/duck zone labels — the canvas itself is the control (top half
+   jumps, bottom half ducks, see input.js), these just explain that.
+   Touch-only, non-interactive (never intercepts the tap underneath). */
+.zone-hint {
   display: none;
-  gap: 10px;
-  padding: 0 16px 14px;
-  background: #fff;
-  border: 5px solid var(--green-dark);
-  border-top: none;
-  border-radius: 0 0 16px 16px;
-  margin-top: -1px;
-}
-.touch button {
-  flex: 1;
-  padding: 16px;
-  border-radius: 12px;
-  border: 3px solid var(--green-dark);
-  border-bottom-width: 6px;
-  background: var(--cream);
-  color: var(--ink);
-  font: 700 15px/1 "Trebuchet MS", sans-serif;
+  position: absolute;
+  left: 0;
+  right: 0;
+  text-align: center;
+  pointer-events: none;
+  color: rgba(255, 255, 255, 0.55);
+  font: 700 13px/1 "Trebuchet MS", sans-serif;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.14em;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
 }
-.touch button:active { border-bottom-width: 3px; transform: translateY(3px); }
+.zone-hint-top { top: 22%; }
+.zone-hint-bottom { bottom: 22%; }
 
 @media (hover: none) and (pointer: coarse) {
-  .touch { display: flex; box-shadow: 0 14px 0 rgba(0, 96, 58, 0.14); }
+  .zone-hint { display: block; }
   .counter { border-radius: 0; box-shadow: none; }
 }
 

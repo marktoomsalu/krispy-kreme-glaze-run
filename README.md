@@ -39,9 +39,14 @@ Then open the URL it prints. `npm run build` puts a deployable copy in `dist/`.
 
 | Action | Keyboard | Touch |
 | --- | --- | --- |
-| Jump / double jump | `Space`, `↑`, `W` | tap the screen or **Jump** |
-| Duck (and fast-fall in mid-air) | `↓`, `S` | hold **Duck** |
+| Jump / double jump | `Space`, `↑`, `W` | tap the **top half** of the game |
+| Duck (and fast-fall in mid-air) | `↓`, `S` | hold the **bottom half** of the game |
 | Pause | `P` | — |
+
+No separate on-screen buttons — the canvas itself is the touch control (see
+the faint ▲/▼ labels), split top/bottom. This replaced a first attempt at
+dedicated Jump/Duck buttons, which the game area's own hint labels made
+redundant.
 
 Collect **12 doughnut holes** to fill the box and switch on the **hot light**: for a
 few seconds you fly (hold jump to climb), you're invincible, obstacles explode for
