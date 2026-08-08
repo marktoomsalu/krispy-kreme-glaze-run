@@ -4,6 +4,7 @@ import { ctx, W, H } from './renderer.js';
 import { clamp, rnd, overlaps } from './util.js';
 import { saveBest } from './storage.js';
 import { sfx } from './audio.js';
+import { startRun, submitScore, getNickname } from './leaderboard.js';
 
 import { jump, updatePlayer, drawPlayer, playerBox } from './entities/player.js';
 import {
@@ -31,6 +32,13 @@ export function press() {
     if (state.mode === 'over' && state.deathTimer > 0) return; // brief lockout
     resetRun();
     sfx.start();
+
+    const seq = state.runSeq;
+    startRun().then((r) => {
+      if (!r || state.runSeq !== seq) return; // run already ended/restarted — drop it
+      state.runId = r.runId;
+      state.runToken = r.token;
+    });
     return;
   }
   if (state.mode === 'paused') {
@@ -93,6 +101,7 @@ function checkCollisions() {
 function smash(o) {
   o.dead = true;
   state.bonus += CFG.rush.smashValue;
+  state.smashes++;
   state.flash = 0.18;
   const c = obstacleCentre(o);
   burst(c.x, c.y, 14, [COLORS.glaze, '#FFE9B0', COLORS.red, COLORS.green], 1.4);
@@ -102,6 +111,7 @@ function smash(o) {
 function collect(h) {
   h.dead = true;
   state.bonus += CFG.holes.value;
+  state.holesCollected++;
   burst(h.x, h.y, 5, [COLORS.glaze, COLORS.dough, '#FFE9B0'], 0.7);
   sfx.collect(player.meter);
 
@@ -130,6 +140,32 @@ function gameOver() {
     state.best = score();
     saveBest(state.best);
   }
+
+  submitCurrentRun();
+}
+
+async function submitCurrentRun() {
+  if (state.submitted) return;
+  if (!state.runId || !state.runToken) {
+    state.lastResult = { status: 'no-token' };
+    return;
+  }
+  state.submitted = true;
+  state.lastResult = { status: 'pending' };
+
+  const seq = state.runSeq;
+  const result = await submitScore({
+    runId: state.runId,
+    token: state.runToken,
+    distance: state.distance,
+    bonus: state.bonus,
+    dozens: state.dozens,
+    holes: state.holesCollected,
+    smashes: state.smashes,
+    nickname: getNickname()
+  });
+  if (state.runSeq !== seq) return; // player already started a new run
+  state.lastResult = result;
 }
 
 /* ----------------------------------------------------------------- draw */

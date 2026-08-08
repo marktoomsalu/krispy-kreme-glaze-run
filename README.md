@@ -67,6 +67,8 @@ src/
   doughnut.js         the shared doughnut art (player, stacks, sun and moon)
   scenery.js          sky, shopfronts, hot light sign, conveyor, glaze curtain
   hud.js              dozen-box meter, scoreboard, title / pause / game over panels
+  leaderboard.js       Supabase client: start a run, submit a score, fetch the top 10
+  ui.js                DOM overlays canvas can't host: nickname entry, leaderboard panel
   entities/
     player.js         movement, jumping, flight, hitbox, the mascot art
     obstacles.js      spawning, movement, hitboxes, and art for each obstacle type
@@ -140,11 +142,50 @@ original and not brand-specific.
 
 ---
 
+## Leaderboard (Supabase)
+
+Scores, ranks, and the two prize tiers (5% discount, free donut) are backed by a
+small Supabase (Postgres) project. Setup is copy-paste, no CLI or deploy pipeline:
+
+1. Create a free project at [supabase.com](https://supabase.com) under your
+   **personal** account.
+2. Open the project's **SQL Editor → New query**, paste the entire contents of
+   [`supabase/schema.sql`](supabase/schema.sql), and run it once. This creates the
+   tables, locks them down with row-level security, and adds the two functions
+   (`start_run`, `submit_score`) the game calls.
+3. In **Project Settings → API**, copy the **Project URL** and the **anon public
+   key**, and paste them into the two constants at the top of
+   [`src/leaderboard.js`](src/leaderboard.js). Both are meant to be public — safe to
+   commit — every actual permission is enforced by the RLS policies and functions
+   in `schema.sql`, not by keeping the key secret.
+4. Optionally, fill in the same Project URL in
+   [`.github/workflows/keep-supabase-warm.yml`](.github/workflows/keep-supabase-warm.yml)
+   — Supabase's free tier pauses a project after ~7 days of no API traffic, and
+   this workflow pings it weekly so that never happens silently.
+
+Until step 3 is done, the game runs fine — the leaderboard just quietly no-ops
+(`leaderboard.js` detects the placeholder values and skips network calls).
+
+**How the anti-cheat works:** `submit_score()` independently recomputes each run's
+score from its own server clock and the game's known physics (max distance
+reachable per second of real time, plus structural checks on holes/smashes/bonus).
+It's a plausibility filter tuned to the actual difficulty curve, not a bulletproof
+system — appropriate for a giveaway, not a bank. The prize thresholds live as named
+constants near the top of `submit_score()` in `schema.sql` (mirrored, display-only,
+in `CFG.rewards` in `src/config.js`) — tune both together if you change them.
+
+**Claiming a prize:** there's no automated redemption flow yet. A claim code shown
+in-game corresponds to a row in the `claims` table (Supabase dashboard → Table
+Editor → `claims`) — look it up there to verify and fulfill it manually.
+
+---
+
 ## Deploying, and keeping it alive long-term
 
-This is a static site — no server, no database, no API keys. That means it can be
-hosted for free, indefinitely, on infrastructure tied to a **personal** account
-rather than any employer:
+This is a static site — the game itself needs no server, and the leaderboard's
+"server" is a free Supabase project, so the whole thing can be hosted for free,
+indefinitely, on infrastructure tied to a **personal** account rather than any
+employer:
 
 **GitHub Pages (recommended)**
 
@@ -159,6 +200,9 @@ rather than any employer:
 
 - Add them as a collaborator (**Settings → Collaborators**), or
 - Transfer the repo to their account (**Settings → General → Transfer ownership**).
+- For the leaderboard: add them as a member of the Supabase project (**Project
+  Settings → Team**), or transfer the Supabase organization itself.
 
 Either way, the game keeps running at the same URL with no involvement from you,
-and nothing in the stack (hosting, code, assets) depends on any company account.
+and nothing in the stack (hosting, code, assets, leaderboard) depends on any
+company account.

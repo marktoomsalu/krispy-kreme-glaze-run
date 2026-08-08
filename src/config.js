@@ -60,6 +60,15 @@ export const CFG = {
 
   dayNight: {
     cycleLength: 5200     // pixels travelled per half day
+  },
+
+  // Display-only mirror of the authoritative thresholds in
+  // supabase/schema.sql (submit_score()). The server never trusts this
+  // copy — it's here purely so the UI can show "N points to go" hints.
+  // Keep both in sync if you tune these.
+  rewards: {
+    discountScore: 1200,
+    freeDonutScore: 4000
   }
 };
 

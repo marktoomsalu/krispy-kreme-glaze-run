@@ -163,10 +163,10 @@ export function drawHotLightSign() {
   ctx.textAlign = 'left';
   ctx.font = '700 18px "Trebuchet MS", sans-serif';
   ctx.fillStyle = lit ? COLORS.red : '#E9D3D8';
-  ctx.fillText('HOT', -19, 1);
+  ctx.fillText('KUUM', -19, 1);
   ctx.font = '700 13px "Trebuchet MS", sans-serif';
   ctx.fillStyle = lit ? COLORS.green : '#CFE0D6';
-  ctx.fillText('NOW', -19, 17);
+  ctx.fillText('NÜÜD', -19, 17);
   ctx.restore();
 }
 

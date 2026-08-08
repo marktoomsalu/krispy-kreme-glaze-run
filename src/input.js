@@ -13,6 +13,8 @@ const DUCK_CODES = ['ArrowDown', 'KeyS'];
  */
 export function initInput({ onPress, onPause, onBlur }) {
   addEventListener('keydown', (e) => {
+    if (isTypingTarget(e.target)) return; // don't hijack keys while typing a nickname
+
     if (JUMP_CODES.includes(e.code)) {
       e.preventDefault();
       if (!keys.jump) onPress();
@@ -26,6 +28,7 @@ export function initInput({ onPress, onPause, onBlur }) {
   });
 
   addEventListener('keyup', (e) => {
+    if (isTypingTarget(e.target)) return;
     if (JUMP_CODES.includes(e.code)) keys.jump = false;
     if (DUCK_CODES.includes(e.code)) keys.duck = false;
   });
@@ -43,6 +46,10 @@ export function initInput({ onPress, onPause, onBlur }) {
   bindButton(document.getElementById('btn-duck'), 'duck');
 
   addEventListener('blur', onBlur);
+}
+
+function isTypingTarget(el) {
+  return el?.tagName === 'INPUT' || el?.tagName === 'TEXTAREA';
 }
 
 function bindButton(el, key, onPress) {

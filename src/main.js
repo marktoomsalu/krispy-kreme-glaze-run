@@ -1,5 +1,6 @@
 import { setupCanvas } from './renderer.js';
 import { initInput } from './input.js';
+import { initUI } from './ui.js';
 import { toggleMute } from './audio.js';
 import { loadBest } from './storage.js';
 import { state } from './state.js';
@@ -14,10 +15,12 @@ initInput({
   onBlur: pauseIfPlaying
 });
 
+initUI();
+
 const muteButton = document.getElementById('mute');
 muteButton.addEventListener('click', () => {
   const muted = toggleMute();
-  muteButton.textContent = `Sound: ${muted ? 'off' : 'on'}`;
+  muteButton.textContent = `Heli: ${muted ? 'väljas' : 'sees'}`;
   muteButton.blur();
 });
 

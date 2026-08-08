@@ -1,0 +1,25 @@
+name: Keep Supabase project warm
+
+# Supabase's free tier pauses a project after ~7 days with zero API
+# traffic. This just pings the project weekly so the leaderboard never
+# silently goes offline. Fill in SUPABASE_URL below once the project
+# exists (same URL as in src/leaderboard.js) — until then this step
+# is a harmless no-op that fails quietly.
+
+on:
+  schedule:
+    - cron: '0 6 * * 1' # every Monday 06:00 UTC
+  workflow_dispatch: {} # lets you trigger it manually from the Actions tab
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Supabase REST endpoint
+        run: |
+          SUPABASE_URL="YOUR_SUPABASE_PROJECT_URL"
+          if [[ "$SUPABASE_URL" == YOUR_* ]]; then
+            echo "SUPABASE_URL not set yet — skipping (fill this in once the Supabase project exists)."
+            exit 0
+          fi
+          curl -sS -o /dev/null -w "%{http_code}\n" "$SUPABASE_URL/rest/v1/" || true

@@ -13,6 +13,13 @@ export const state = {
   deathTimer: 0,     // brief lockout so you can't insta-restart
   dozens: 0,
   best: 0,
+  holesCollected: 0, // all holes collected this run — feeds the leaderboard submission
+  smashes: 0,        // obstacles smashed this run — feeds the leaderboard submission
+  runId: null,
+  runToken: null,
+  runSeq: 0,         // bumped every resetRun(); guards a stale startRun() promise from a past run
+  submitted: false,  // gameOver() submits at most once per run
+  lastResult: null,  // { status: 'pending'|'accepted'|'rejected'|'error'|'no-token', score, rank, tier, claimCode, reason }
   nextObstacle: 560,
   nextHoles: 620,
   obstacles: [],
@@ -45,6 +52,13 @@ export function resetRun() {
   state.flash = 0;
   state.deathTimer = 0;
   state.dozens = 0;
+  state.holesCollected = 0;
+  state.smashes = 0;
+  state.runId = null;
+  state.runToken = null;
+  state.runSeq++;
+  state.submitted = false;
+  state.lastResult = null;
   state.nextObstacle = 560;
   state.nextHoles = 620;
   state.obstacles.length = 0;

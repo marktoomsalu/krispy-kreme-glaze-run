@@ -119,6 +119,26 @@ kbd {
 }
 .mute:active { border-bottom-width: 2px; transform: translateY(2px); }
 
+.ghost {
+  background: var(--cream);
+  border: 2px solid var(--green-dark);
+  border-bottom-width: 4px;
+  border-radius: 9px;
+  padding: 6px 12px;
+  font: 700 12px/1 ui-monospace, monospace;
+  color: var(--green-dark);
+  cursor: pointer;
+}
+.ghost:active { border-bottom-width: 2px; transform: translateY(2px); }
+
+.teaser {
+  margin: 8px 4px 0;
+  font-size: 12px;
+  font-weight: 700;
+  text-align: center;
+  color: var(--green-dark);
+}
+
 .touch {
   display: none;
   gap: 10px;
@@ -155,3 +175,74 @@ kbd {
   color: rgba(31, 46, 38, 0.55);
   text-align: center;
 }
+
+.hidden { display: none !important; }
+
+.overlay-panel {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 24px;
+  background: rgba(0, 40, 26, 0.88);
+  color: #fff;
+  text-align: center;
+}
+
+.overlay-panel h2 {
+  margin: 0 0 4px;
+  font: 400 30px "Segoe Script", "Brush Script MT", "Snell Roundhand", cursive;
+}
+
+.overlay-panel label {
+  font: 700 12px/1 ui-monospace, monospace;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #bfe8d3;
+}
+
+.overlay-panel input {
+  width: min(240px, 80%);
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 2px solid var(--green-dark);
+  font: 600 14px "Trebuchet MS", sans-serif;
+  text-align: center;
+}
+
+.overlay-panel button {
+  background: var(--red);
+  border: 2px solid var(--red-dark);
+  border-bottom-width: 4px;
+  border-radius: 9px;
+  padding: 8px 18px;
+  font: 700 12px/1 ui-monospace, monospace;
+  color: #fff;
+  cursor: pointer;
+}
+.overlay-panel button:active { border-bottom-width: 2px; transform: translateY(2px); }
+
+#leaderboard-result p {
+  margin: 2px 0;
+  font: 600 13px "Trebuchet MS", sans-serif;
+}
+#leaderboard-result p.win { color: #ffd8e2; font-weight: 700; }
+#leaderboard-result p.nudge { color: #bfe8d3; }
+
+#leaderboard-list {
+  width: min(320px, 100%);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  max-height: 160px;
+  overflow-y: auto;
+  font: 600 13px ui-monospace, monospace;
+  text-align: left;
+}
+#leaderboard-list li { padding: 2px 0; }
+#leaderboard-list li.tier-discount { color: #ffd8e2; }
+#leaderboard-list li.tier-free_donut { color: #ffc44d; font-weight: 700; }

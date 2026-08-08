@@ -61,7 +61,7 @@ function drawDozenBox() {
   ctx.font = '700 9px ui-monospace, monospace';
   ctx.textAlign = 'left';
   ctx.fillStyle = player.rush > 0 ? '#FFD8E2' : '#FFFFFF';
-  ctx.fillText(player.rush > 0 ? 'HOT LIGHT ON!' : 'FILL THE DOZEN', bx, by + bh + 15);
+  ctx.fillText(player.rush > 0 ? 'KUUM TULI PÕLEB!' : 'TÄIDA TOSIN', bx, by + bh + 15);
   ctx.restore();
 }
 
@@ -77,27 +77,30 @@ function drawScoreboard() {
 
   ctx.font = '700 11px ui-monospace, monospace';
   ctx.globalAlpha = 0.85;
-  ctx.fillText(`BEST ${String(state.best).padStart(5, '0')}`, W - 20, 68);
+  ctx.fillText(`PARIM ${String(state.best).padStart(5, '0')}`, W - 20, 68);
   if (state.dozens > 0) {
-    ctx.fillText(`${state.dozens} ${state.dozens > 1 ? 'DOZENS' : 'DOZEN'} BOXED`, W - 20, 84);
+    ctx.fillText(`${state.dozens} ${state.dozens > 1 ? 'TOSINAT' : 'TOSIN'} PAKITUD`, W - 20, 84);
   }
   ctx.restore();
 }
 
 function drawPanels() {
   if (state.mode === 'ready') {
-    panel('Krispy Kreme', 'Jump the coffee, duck the dozen boxes.', 'Press space or tap to start');
+    panel('Krispy Kreme', 'H\u00FCppa \u00FCle kohvi, k\u00FCkita tosinakastide alt.', 'Vajuta t\u00FChikut v\u00F5i puuduta, et alustada');
   } else if (state.mode === 'paused') {
-    panel('Back in a minute', 'The fryer is still on.', 'Press P to keep running');
+    panel('Kohe tagasi', 'Frittija p\u00F5leb endiselt.', 'Vajuta P, et j\u00E4tkata');
   } else if (state.mode === 'over') {
-    const bits = [`${score()} metres`];
-    if (state.dozens) bits.push(`${state.dozens} dozen boxed`);
-    if (score() >= state.best && state.best > 0) bits.push('fresh record!');
-    panel(
-      'Splat!',
-      bits.join(' \u00B7 '),
-      state.deathTimer > 0 ? '' : 'Press space or tap for another batch'
-    );
+    const bits = [`${score()} meetrit`];
+    if (state.dozens) bits.push(`${state.dozens} ${state.dozens > 1 ? 'tosinat' : 'tosin'} pakitud`);
+    if (score() >= state.best && state.best > 0) bits.push('uus rekord!');
+
+    const result = state.lastResult;
+    if (result?.status === 'accepted' && result.rank) bits.push(`koht #${result.rank}`);
+
+    let cta = state.deathTimer > 0 ? '' : 'Vajuta t\u00FChikut v\u00F5i puuduta, et k\u00FCpsetada uus partii';
+    if (result?.status === 'pending') cta = 'Kontrollime tulemust\u2026';
+
+    panel('Pl\u00E4rts!', bits.join(' \u00B7 '), cta);
   }
 }
 
