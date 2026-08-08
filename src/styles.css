@@ -11,8 +11,19 @@
 /* touch-action:manipulation stops the browser's double-tap-to-zoom gesture
    on quick double jumps — user-scalable=no in the viewport meta isn't
    enough on its own, iOS in particular still honours double-tap-zoom
-   unless the element opts out like this. */
-* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+   unless the element opts out like this. user-select/-webkit-touch-callout
+   stop the OS text-selection highlight and long-press copy/lookup menu
+   that mobile browsers otherwise show on any repeatedly-tapped text —
+   nothing on this page is meant to be selected. */
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+input, textarea { user-select: text; -webkit-user-select: text; -webkit-touch-callout: default; }
 html, body { margin: 0; height: 100%; }
 
 body {
@@ -148,8 +159,8 @@ kbd {
 }
 
 /* Jump/duck zone labels — the canvas itself is the control (top half
-   jumps, bottom half ducks, see input.js), these just explain that.
-   Touch-only, non-interactive (never intercepts the tap underneath). */
+   jumps, bottom half ducks, see input.js), these just explain that once,
+   then fade out for good rather than sitting over the game forever. */
 .zone-hint {
   display: none;
   position: absolute;
@@ -157,14 +168,22 @@ kbd {
   right: 0;
   text-align: center;
   pointer-events: none;
-  color: rgba(255, 255, 255, 0.55);
+  color: rgba(255, 255, 255, 0.75);
   font: 700 13px/1 "Trebuchet MS", sans-serif;
   text-transform: uppercase;
   letter-spacing: 0.14em;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+  opacity: 0;
+  animation: zone-hint-fade 5.5s ease-out forwards;
 }
 .zone-hint-top { top: 22%; }
 .zone-hint-bottom { bottom: 22%; }
+
+@keyframes zone-hint-fade {
+  8% { opacity: 1; }
+  65% { opacity: 1; }
+  100% { opacity: 0; }
+}
 
 @media (hover: none) and (pointer: coarse) {
   .zone-hint { display: block; }
