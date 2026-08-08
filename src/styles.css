@@ -13,8 +13,11 @@
    enough on its own, iOS in particular still honours double-tap-zoom
    unless the element opts out like this. user-select/-webkit-touch-callout
    stop the OS text-selection highlight and long-press copy/lookup menu
-   that mobile browsers otherwise show on any repeatedly-tapped text —
-   nothing on this page is meant to be selected. */
+   that mobile browsers otherwise show on any repeatedly-tapped text, and
+   -webkit-user-drag stops the separate native "drag this image out" blue
+   handle Safari shows on <img> elements (the logo) — a different gesture
+   from text selection, needing its own opt-out. Nothing on this page is
+   meant to be selected or dragged. */
 * {
   box-sizing: border-box;
   -webkit-tap-highlight-color: transparent;
@@ -22,6 +25,8 @@
   user-select: none;
   -webkit-user-select: none;
   -webkit-touch-callout: none;
+  -webkit-user-drag: none;
+  user-drag: none;
 }
 input, textarea { user-select: text; -webkit-user-select: text; -webkit-touch-callout: default; }
 html, body { margin: 0; height: 100%; }
