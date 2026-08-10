@@ -86,7 +86,7 @@ function drawScoreboard() {
 
 function drawPanels() {
   if (state.mode === 'ready') {
-    panel('Krispy Kreme', 'H\u00FCppa \u00FCle kohvi, k\u00FCkita tosinakastide alt.', 'Vajuta t\u00FChikut v\u00F5i puuduta, et alustada');
+    panel('Krispy Kreme', 'H\u00FCppa \u00FCle kohvi, k\u00FCkita s\u00F5\u00F5rikukarpide alt.', 'Vajuta t\u00FChikut v\u00F5i puuduta, et alustada');
   } else if (state.mode === 'paused') {
     panel('Kohe tagasi', 'Frittija p\u00F5leb endiselt.', 'Vajuta P, et j\u00E4tkata');
   } else if (state.mode === 'over') {
