@@ -13,6 +13,7 @@ const supabase = configured ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : nu
 
 const NICK_KEY = 'glaze-runner:nickname';
 const PLAYER_KEY = 'glaze-runner:playerId';
+const TUTORIAL_KEY = 'glaze-runner:tutorialSeen';
 
 // A random id the client mints once and reuses forever, so the leaderboard
 // can keep just this player's best run instead of one row per attempt. Not
@@ -109,6 +110,25 @@ export const getNickname = () => {
 export function saveNickname(name) {
   try {
     localStorage.setItem(NICK_KEY, name.slice(0, 20));
+  } catch {
+    /* ignore */
+  }
+}
+
+// Separate from the nickname check on purpose — someone who already saved a
+// nickname before this tutorial existed should still see it once, so this
+// isn't "no nickname yet" repurposed, it's its own flag.
+export const hasSeenTutorial = () => {
+  try {
+    return localStorage.getItem(TUTORIAL_KEY) === '1';
+  } catch {
+    return false;
+  }
+};
+
+export function markTutorialSeen() {
+  try {
+    localStorage.setItem(TUTORIAL_KEY, '1');
   } catch {
     /* ignore */
   }

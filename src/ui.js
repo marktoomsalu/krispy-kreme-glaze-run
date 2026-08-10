@@ -1,6 +1,13 @@
 import { CFG } from './config.js';
 import { state } from './state.js';
-import { fetchTop, getNickname, saveNickname, submitClaimContact } from './leaderboard.js';
+import {
+  fetchTop,
+  getNickname,
+  saveNickname,
+  submitClaimContact,
+  hasSeenTutorial,
+  markTutorialSeen
+} from './leaderboard.js';
 
 const TIER_COPY = {
   discount: { win: '5% allahindluse', noun: '5% allahindlus' },
@@ -22,7 +29,10 @@ export function initUI() {
     lbTeaser: document.getElementById('leaderboard-teaser')
   };
 
-  if (!getNickname()) refs.nickPrompt.classList.remove('hidden');
+  if (!hasSeenTutorial()) {
+    refs.nickInput.value = getNickname(); // don't make a returning player retype it
+    refs.nickPrompt.classList.remove('hidden');
+  }
 
   refs.nickSave.addEventListener('click', () => saveNicknameFromInput(refs));
   refs.nickInput.addEventListener('keydown', (e) => {
@@ -49,6 +59,7 @@ function saveNicknameFromInput({ nickInput, nickPrompt }) {
   const name = nickInput.value.trim();
   if (!name) return;
   saveNickname(name);
+  markTutorialSeen();
   nickPrompt.classList.add('hidden');
 }
 

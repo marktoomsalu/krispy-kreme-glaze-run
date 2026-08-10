@@ -225,6 +225,28 @@ kbd {
   font: 400 30px "Segoe Script", "Brush Script MT", "Snell Roundhand", cursive;
 }
 
+.tutorial {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+.tutorial p {
+  margin: 0;
+  padding: 6px 12px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  font: 600 13px "Trebuchet MS", sans-serif;
+}
+.tutorial p em { font-style: normal; opacity: 0.7; }
+.tutorial p strong { color: #ffd8e2; }
+.tutorial-icon {
+  display: inline-block;
+  width: 1.4em;
+  color: #ffc44d;
+  font-weight: 700;
+}
+
 .overlay-panel label {
   font: 700 12px/1 ui-monospace, monospace;
   letter-spacing: 0.06em;
