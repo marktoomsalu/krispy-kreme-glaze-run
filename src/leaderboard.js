@@ -65,6 +65,7 @@ export async function submitScore({ runId, token, distance, bonus, dozens, holes
       tier: r.tier,
       claimCode: r.claim_code,
       isNewBest: r.is_new_best,
+      weeklyRank: r.weekly_rank,
       reason: r.reason
     };
   } catch {
@@ -91,6 +92,37 @@ export async function fetchTop(n = 10) {
     const { data, error } = await supabase
       .from('leaderboard')
       .select('nickname,score,tier,created_at')
+      .order('score', { ascending: false })
+      .limit(n);
+    return error ? [] : data;
+  } catch {
+    return [];
+  }
+}
+
+// Monday-start, UTC — must match the server's `date_trunc('week', now() at
+// time zone 'utc')::date` in submit_score() exactly, or a submission can
+// land in a week bucket this never reads back. Built from UTC calendar
+// fields only, so it's independent of the browser's local timezone/DST.
+function currentWeekStart() {
+  const now = new Date();
+  const utcMidnight = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+  const day = new Date(utcMidnight).getUTCDay(); // 0 (Sun) .. 6 (Sat)
+  const isoDay = day === 0 ? 7 : day; // 1 (Mon) .. 7 (Sun), ISO 8601
+  const monday = new Date(utcMidnight - (isoDay - 1) * 86400000);
+  const yyyy = monday.getUTCFullYear();
+  const mm = String(monday.getUTCMonth() + 1).padStart(2, '0');
+  const dd = String(monday.getUTCDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+export async function fetchTopWeekly(n = 10) {
+  if (!supabase) return [];
+  try {
+    const { data, error } = await supabase
+      .from('weekly_leaderboard')
+      .select('nickname,score,created_at')
+      .eq('week_start', currentWeekStart())
       .order('score', { ascending: false })
       .limit(n);
     return error ? [] : data;

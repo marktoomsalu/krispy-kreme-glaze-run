@@ -193,6 +193,16 @@ new one. Fulfillment is still manual: look the code up in the Supabase dashboard
 (Table Editor → `claims`) to see its `contact` value and mark it however you
 track fulfillment.
 
+**Weekly leaderboard:** alongside the all-time board, `weekly_leaderboard` holds
+one row per player per ISO week (Monday–Sunday, UTC), so there's always a fresh,
+achievable target even once the all-time board has entrenched leaders — the game
+defaults to showing this view first, with the all-time list one tab away. There's
+no reset job: a new week's `WHERE week_start = ...` query simply returns nothing
+until fresh scores land in it, and old weeks' rows are kept (not deleted) for
+history. If you want to attach a real prize to "this week's #1" later, that's not
+automated — check the dashboard each Monday and reach out by hand, same as the
+all-time tiers today.
+
 ---
 
 ## Deploying, and keeping it alive long-term

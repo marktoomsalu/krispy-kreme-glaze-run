@@ -1,54 +1,15 @@
 -- ============================================================
--- Krispy Kreme: Glaze Run — leaderboard schema.
+-- Migration 002: weekly leaderboard.
 --
--- One-time setup: Supabase dashboard → SQL Editor → New query →
--- paste this whole file → Run. From-scratch script, not a
--- migration — don't re-run against a project that already has
--- these objects (drop them first if you need to reset). If you're
--- patching an already-live project, use supabase/migrations/ instead.
---
--- After running this, copy your Project URL and anon public key
--- (Project Settings → API) into src/leaderboard.js. Both are safe
--- to commit publicly — everything they can do is governed by the
--- RLS policies and SECURITY DEFINER functions below, not secrecy.
+-- Run this against the already-live project (paste into a fresh
+-- SQL Editor query, Run). Adds the weekly_leaderboard table and
+-- extends submit_score() to also upsert into it and return
+-- weekly_rank — safe to run once. For a brand-new project, just
+-- run supabase/schema.sql instead; it already has this baked in.
 -- ============================================================
 
-create extension if not exists pgcrypto; -- gen_random_bytes(); gen_random_uuid() is built into PG13+
+-- ---------------------------------------------------------------- weekly_leaderboard: one row per player per ISO week
 
--- ---------------------------------------------------------------- tables
-
-create table public.run_tokens (
-  id         uuid primary key default gen_random_uuid(),
-  token      text not null default encode(gen_random_bytes(16), 'hex'),
-  created_at timestamptz not null default now(),
-  used       boolean not null default false
-);
-
--- One row per player, not per run: player_id is a random id the client
--- generates once and caches in localStorage (see src/leaderboard.js).
--- Only ever holds that player's best-ever score — submit_score() updates
--- in place instead of inserting a new row when a run doesn't beat it.
-create table public.leaderboard (
-  id         uuid primary key default gen_random_uuid(),
-  player_id  uuid not null,
-  nickname   text not null,
-  score      int not null,
-  dozens     int not null default 0,
-  tier       text,
-  created_at timestamptz not null default now()
-);
-
-create unique index leaderboard_player_id_key on public.leaderboard (player_id);
-
--- One row per player per ISO week (Monday-start, UTC) — mirrors
--- `leaderboard`'s "only the best run" shape, just scoped to the current
--- week instead of all-time. week_start must be computed identically here
--- and in src/leaderboard.js's currentWeekStart(), or a submission can land
--- in a week bucket the client never reads back. There is no reset job —
--- old weeks' rows are kept, not deleted; the "reset" is just that a new
--- week's WHERE clause returns nothing until fresh scores land in it. Old
--- rows stay for history/manual fulfillment, same as how the all-time
--- tiers are fulfilled by hand via the dashboard today.
 create table public.weekly_leaderboard (
   id         uuid primary key default gen_random_uuid(),
   player_id  uuid not null,
@@ -63,47 +24,8 @@ create table public.weekly_leaderboard (
 create index weekly_leaderboard_week_score_idx
   on public.weekly_leaderboard (week_start, score desc);
 
-create table public.claims (
-  id             uuid primary key default gen_random_uuid(),
-  leaderboard_id uuid references public.leaderboard(id) on delete cascade,
-  tier           text not null,
-  claim_code     text not null unique,
-  contact        text, -- how to reach the winner; filled in later via submit_claim_contact()
-  status         text not null default 'pending',
-  created_at     timestamptz not null default now(),
-  unique (leaderboard_id, tier) -- one claim per player per tier, ever — replays reuse the same code
-);
-
--- ---------------------------------------------------------------- RLS + grants
---
--- Supabase's default privileges can grant broad access to anon/
--- authenticated on newly created tables — don't rely on RLS alone,
--- explicitly revoke first, then grant back only what's needed.
-
-alter table public.run_tokens         enable row level security; -- no policies added below -> deny-all to anon/authenticated
-alter table public.leaderboard        enable row level security;
 alter table public.weekly_leaderboard enable row level security;
-alter table public.claims             enable row level security; -- no policies added below -> deny-all to anon/authenticated
-
-revoke all on public.run_tokens         from anon, authenticated;
-revoke all on public.claims             from anon, authenticated;
-revoke all on public.leaderboard        from anon, authenticated;
 revoke all on public.weekly_leaderboard from anon, authenticated;
-
--- IMPORTANT: do NOT run `alter table ... force row level security` on
--- these tables. The SECURITY DEFINER functions below run as their
--- owner (the role that ran this script — usually `postgres`), and
--- table owners bypass RLS unless FORCE is set. FORCE would lock the
--- functions themselves out too, which breaks everything.
-
-create policy "leaderboard is publicly readable"
-  on public.leaderboard for select
-  to anon, authenticated
-  using (true);
-
-grant select on public.leaderboard to anon, authenticated;
--- No insert/update/delete grants on leaderboard for anon/authenticated —
--- only submit_score() (SECURITY DEFINER, below) writes to it.
 
 create policy "weekly leaderboard is publicly readable"
   on public.weekly_leaderboard for select
@@ -111,48 +33,11 @@ create policy "weekly leaderboard is publicly readable"
   using (true);
 
 grant select on public.weekly_leaderboard to anon, authenticated;
--- No insert/update/delete grants here either — only submit_score() writes.
+-- No insert/update/delete grants — only submit_score() writes here.
 
--- ---------------------------------------------------------------- start_run()
+-- ---------------------------------------------------------------- submit_score(): new return shape (weekly_rank added), so drop first
 
-create or replace function public.start_run()
-returns table(run_id uuid, token text)
-language plpgsql
-security definer
-set search_path = public, extensions
-as $$
-declare
-  v_id uuid;
-  v_token text;
-begin
-  insert into public.run_tokens as rt default values
-  returning rt.id, rt.token into v_id, v_token;
-
-  return query select v_id, v_token;
-end;
-$$;
-
-revoke all on function public.start_run() from public;
-grant execute on function public.start_run() to anon, authenticated;
-
--- ---------------------------------------------------------------- submit_score()
---
--- Independently recomputes the score from structured run data and
--- rejects anything that isn't physically reachable in the elapsed
--- server-side time. This is a soft plausibility filter tuned to the
--- game's actual difficulty curve, not a bulletproof anti-cheat system
--- — appropriate for a giveaway prize, not a financial one.
---
--- Only writes to `leaderboard` when this run beats the player's own
--- previous best (or it's their first submission) — the table always
--- holds one row per player_id, their best-ever run. Tier/claim state
--- is derived from that best, and a claim code is only ever minted once
--- per (player, tier): replaying an already-won tier just returns the
--- same code again instead of generating a new one.
---
--- Also upserts into `weekly_leaderboard` the same way, scoped to the
--- current ISO week instead of being global, and returns weekly_rank
--- alongside the all-time rank.
+drop function if exists public.submit_score(uuid, text, numeric, int, int, int, int, text, uuid);
 
 create or replace function public.submit_score(
   p_run_id    uuid,
@@ -386,32 +271,3 @@ $$;
 
 revoke all on function public.submit_score(uuid, text, numeric, int, int, int, int, text, uuid) from public;
 grant execute on function public.submit_score(uuid, text, numeric, int, int, int, int, text, uuid) to anon, authenticated;
-
--- ---------------------------------------------------------------- submit_claim_contact()
---
--- Lets a winner attach contact info to their own claim code so it can
--- actually be followed up on. Knowing the code (shown only to the
--- winner, never exposed via any public read) is the authorization —
--- appropriate for a giveaway, not a financial system. Can only be set
--- once per code, so it can't be overwritten/spammed after the fact.
-
-create or replace function public.submit_claim_contact(p_claim_code text, p_contact text)
-returns boolean
-language plpgsql
-security definer
-set search_path = public, extensions
-as $$
-declare
-  v_updated int;
-begin
-  update public.claims
-  set contact = left(trim(p_contact), 200)
-  where claim_code = p_claim_code and contact is null and trim(coalesce(p_contact, '')) <> '';
-
-  get diagnostics v_updated = row_count;
-  return v_updated > 0;
-end;
-$$;
-
-revoke all on function public.submit_claim_contact(text, text) from public;
-grant execute on function public.submit_claim_contact(text, text) to anon, authenticated;

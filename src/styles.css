@@ -282,6 +282,32 @@ kbd {
 #leaderboard-result p.win { color: #ffd8e2; font-weight: 700; }
 #leaderboard-result p.nudge { color: #bfe8d3; }
 
+.lb-tabs {
+  display: flex;
+  gap: 6px;
+  margin: 2px 0 4px;
+}
+/* .overlay-panel button (0,1,1 specificity) would otherwise beat a bare
+   .lb-tab (0,1,0) and paint both tabs red regardless of .active — scope
+   under .overlay-panel here too so this reliably wins. */
+.overlay-panel .lb-tab {
+  background: transparent;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-bottom-width: 3px;
+  border-radius: 8px;
+  padding: 5px 12px;
+  font: 700 11px/1 ui-monospace, monospace;
+  letter-spacing: 0.04em;
+  color: rgba(255, 255, 255, 0.65);
+  cursor: pointer;
+}
+.overlay-panel .lb-tab.active {
+  background: var(--red);
+  border-color: var(--red-dark);
+  color: #fff;
+}
+.overlay-panel .lb-tab:active { border-bottom-width: 2px; transform: translateY(1px); }
+
 .contact-form {
   display: flex;
   flex-direction: column;

@@ -2,6 +2,7 @@ import { CFG } from './config.js';
 import { state } from './state.js';
 import {
   fetchTop,
+  fetchTopWeekly,
   getNickname,
   saveNickname,
   submitClaimContact,
@@ -15,6 +16,7 @@ const TIER_COPY = {
 };
 
 let lastHandledKey = null;
+let currentView = 'week'; // 'week' | 'alltime' — which tab the leaderboard panel shows
 
 export function initUI() {
   const refs = {
@@ -26,7 +28,9 @@ export function initUI() {
     lbList: document.getElementById('leaderboard-list'),
     lbClose: document.getElementById('leaderboard-close'),
     lbOpen: document.getElementById('leaderboard-open'),
-    lbTeaser: document.getElementById('leaderboard-teaser')
+    lbTeaser: document.getElementById('leaderboard-teaser'),
+    lbTabWeek: document.getElementById('lb-tab-week'),
+    lbTabAlltime: document.getElementById('lb-tab-alltime')
   };
 
   if (!hasSeenTutorial()) {
@@ -43,8 +47,11 @@ export function initUI() {
   refs.lbOpen.addEventListener('click', async () => {
     refs.lbResult.textContent = '';
     refs.lbPanel.classList.remove('hidden');
-    await renderList(refs.lbList);
+    await renderList(refs.lbList, currentView);
   });
+
+  refs.lbTabWeek.addEventListener('click', () => switchView('week', refs));
+  refs.lbTabAlltime.addEventListener('click', () => switchView('alltime', refs));
 
   renderTeaser(refs.lbTeaser);
 
@@ -53,6 +60,14 @@ export function initUI() {
     requestAnimationFrame(poll);
   };
   requestAnimationFrame(poll);
+}
+
+async function switchView(view, refs) {
+  if (view === currentView) return;
+  currentView = view;
+  refs.lbTabWeek.classList.toggle('active', view === 'week');
+  refs.lbTabAlltime.classList.toggle('active', view === 'alltime');
+  await renderList(refs.lbList, currentView);
 }
 
 function saveNicknameFromInput({ nickInput, nickPrompt }) {
@@ -75,12 +90,13 @@ function tick(refs) {
 async function showResult(result, refs) {
   renderResultBlock(refs.lbResult, result);
   refs.lbPanel.classList.remove('hidden');
-  await renderList(refs.lbList);
+  await renderList(refs.lbList, currentView);
 }
 
 function renderResultBlock(el, result) {
   el.textContent = '';
   addLine(el, `Sinu tulemus: ${result.score} · koht #${result.rank}`);
+  if (result.weeklyRank) addLine(el, `Sel nädalal: koht #${result.weeklyRank}`, 'nudge');
 
   if (result.tier) {
     const copy = TIER_COPY[result.tier];
@@ -163,13 +179,16 @@ function addLine(el, text, className) {
   el.appendChild(p);
 }
 
-async function renderList(listEl) {
-  const rows = await fetchTop(10);
+async function renderList(listEl, view) {
+  const rows = view === 'alltime' ? await fetchTop(10) : await fetchTopWeekly(10);
   listEl.textContent = '';
 
   if (!rows.length) {
     const li = document.createElement('li');
-    li.textContent = 'Edetabel on veel tühi — ole esimene!';
+    li.textContent =
+      view === 'alltime'
+        ? 'Edetabel on veel tühi — ole esimene!'
+        : 'Selle nädala edetabel on veel tühi — ole esimene!';
     listEl.appendChild(li);
     return;
   }
@@ -184,8 +203,8 @@ async function renderList(listEl) {
 
 async function renderTeaser(el) {
   if (!el) return;
-  const rows = await fetchTop(1);
+  const rows = await fetchTopWeekly(1);
   el.textContent = rows.length
-    ? `Praegune liider: ${rows[0].nickname} — ${rows[0].score} punkti`
-    : 'Ole esimene edetabelis!';
+    ? `Selle nädala liider: ${rows[0].nickname} — ${rows[0].score} punkti`
+    : 'Ole selle nädala esimene liider!';
 }
